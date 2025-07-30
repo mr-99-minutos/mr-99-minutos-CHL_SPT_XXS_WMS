@@ -1,0 +1,167 @@
+<!-- python3 -m http.server 8000  -->
+<!-- http://localhost:8000/index.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Visualizar GeoJSON con Colores Aleatorios</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    
+    <!-- Incluir la librería y los estilos de Mapbox -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.7.0/mapbox-gl.js"></script>
+    <!-- Geocoder CSS -->
+    <link href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.css" rel="stylesheet" />
+    <!-- Geocoder JS -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.7.2/mapbox-gl-geocoder.min.js"></script>
+
+
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        /* Asegurar que el buscador esté en la parte superior */
+        .mapboxgl-ctrl-geocoder {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 50%;
+            z-index: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<script>
+    window.onload = function() {
+        // Tu token de acceso a Mapbox
+        mapboxgl.accessToken = 'pk.eyJ1IjoibXItOTktbWludXRvcyIsImEiOiJjbTFndGFocDUwNnJsMmpvb2Q2cTZiNGl5In0.0dlNGjiV9r8nLfZU1d6_6g'; // Reemplaza con tu token de Mapbox
+
+        // Crear el mapa
+        const map = new mapboxgl.Map({
+            container: 'map', // Id del div donde se mostrará el mapa
+            style: 'mapbox://styles/mapbox/streets-v11', // Estilo del mapa
+            center: [-71.5430, -35.6751], // Posición inicial [longitud, latitud]
+            zoom: 4.5 // Nivel de zoom inicial
+        });
+
+        // Añadir el control de navegación y mantener habilitado el zoom de scroll
+        map.addControl(new mapboxgl.NavigationControl());
+    
+        // Geocoder (buscador de direcciones)
+        const geocoder = new MapboxGeocoder({
+            accessToken: mapboxgl.accessToken,
+            mapboxgl: mapboxgl
+        });
+        map.addControl(geocoder, 'top-left');
+
+
+
+
+
+
+
+
+        // Función para generar colores aleatorios
+        function getRandomColor() {
+            const letters = '0123456789ABCDEF';
+            let color = '#';
+            for (let i = 0; i < 6; i++) {
+                color += letters[Math.floor(Math.random() * 16)];
+            }
+            return color;
+        }
+
+        // Objeto para almacenar colores generados por nombre
+        const colorMap = {};
+
+        // Cargar y agregar el GeoJSON
+        map.on('load', () => {
+            // Agregar la fuente GeoJSON
+            map.addSource('geojson-data', {
+                'type': 'geojson',
+                'data': './1. SPRINT_44_30072025_TI_AC.geojson' // Ruta al archivo GeoJSON
+            });
+
+            // Leer el GeoJSON y asignar colores aleatorios
+            fetch('./1. SPRINT_44_30072025_TI_AC.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    // Asignar colores a los nombres únicos
+                    data.features.forEach(feature => {
+                        const name = feature.properties.name;
+                        if (!colorMap[name]) {
+                            colorMap[name] = '#12f200';
+                            // colorMap[name] = getRandomColor();
+                        }
+                    });
+
+                    // Agregar la capa con colores aleatorios
+                    map.addLayer({
+                        'id': 'geojson-layer',
+                        'type': 'fill',
+                        'source': 'geojson-data',
+                        'paint': {
+                            'fill-color': [
+                                'match',
+                                ['get', 'name'],
+                                ...Object.entries(colorMap).flat(),
+                                '#888888' // Color por defecto
+                            ],
+                            'fill-opacity': 0.2
+                        }
+                    });
+
+                    // Agregar el borde a los polígonos
+                    map.addLayer({
+                        'id': 'outline',
+                        'type': 'line',
+                        'source': 'geojson-data',
+                        'layout': {},
+                        'paint': {
+                            'line-color': '#000',
+                            'line-width': 0.1
+                        }
+                    });
+                });
+
+            // Agregar un popup al hacer clic en un polígono
+            map.on('click', 'geojson-layer', (e) => {
+                const properties = e.features[0].properties;
+
+                // Mostrar solo las propiedades 'name', 'service', 'commune' y 'station'
+                const content = `
+                    <strong>zonificacion:</strong> ${properties.zonificacion}<br>
+                    <strong>service:</strong> ${properties.service}<br>
+                    <strong>capacity:</strong> ${properties.capacity}<br>
+                    <strong>station:</strong> ${properties.station}
+                `;
+
+                new mapboxgl.Popup()
+                    .setLngLat(e.lngLat)
+                    .setHTML(content)
+                    .addTo(map);
+            });
+
+            // Cambiar el cursor a "pointer" cuando está sobre un polígono
+            map.on('mouseenter', 'geojson-layer', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            // Restaurar el cursor cuando sale del polígono
+            map.on('mouseleave', 'geojson-layer', () => {
+                map.getCanvas().style.cursor = '';
+            });
+        });
+
+        // Manejo de errores
+        map.on('error', function(e) {
+            console.error('Error al cargar el GeoJSON o el mapa:', e);
+        });
+    };
+</script>
+
+</body>
+</html>
