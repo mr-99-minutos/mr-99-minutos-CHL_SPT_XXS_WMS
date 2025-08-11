@@ -82,11 +82,11 @@
             // Agregar la fuente GeoJSON
             map.addSource('geojson-data', {
                 'type': 'geojson',
-                'data': './1. SPRINT_44_30072025_TI_AC.geojson' // Ruta al archivo GeoJSON
+                'data': './SPRINT_XXS_11082025_1_TI_AC.geojson' // Ruta al archivo GeoJSON
             });
 
             // Leer el GeoJSON y asignar colores aleatorios
-            fetch('./1. SPRINT_44_30072025_TI_AC.geojson')
+            fetch('./SPRINT_XXS_11082025_1_TI_AC.geojson')
                 .then(response => response.json())
                 .then(data => {
                     // Asignar colores a los nombres únicos
